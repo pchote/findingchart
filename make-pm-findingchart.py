@@ -34,7 +34,7 @@ def rescale_image_data(data, clip_low, clip_high):
     low = numpy.percentile(data, clip_low)
     scale = 255. / (high - low)
     data = numpy.clip(data, low, high)
-    return scale * (data - low)
+    return 255 - scale * (data - low)
 
 def sexagesimal(angle):
     """Formats a decimal number in sexagesimal format"""
@@ -69,7 +69,8 @@ def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees,
     return (ra, dec)
 
 def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, width, height, survey, out_path):
-    circle_r = 5
+    circle_r = 15
+    circle_r2 = 15
     ra_j2000_degrees = parse_sexagesimal(in_ra) * 15
     dec_j2000_degrees = parse_sexagesimal(in_dec)
     ra_pm_degrees = float(ra_pm) / 3600
@@ -99,14 +100,37 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
         old_x, old_y = w.wcs_world2pix(numpy.array([frame_coords], numpy.float_), 0, ra_dec_order=True)[0]
         new_x, new_y = w.wcs_world2pix(numpy.array([[ra_target, dec_target]], numpy.float_), 0, ra_dec_order=True)[0]
 
-        scaled = rescale_image_data(frame.data, 1, 99)
+        delta_x = new_x - old_x
+        delta_y = new_y - old_y
+        delta_l = math.sqrt(delta_x * delta_x + delta_y * delta_y)
+        dir_x = delta_x / delta_l
+        dir_y = delta_y / delta_l
+
+
+        scaled = rescale_image_data(frame.data, 1, 99.5)
         png = Image.fromarray(scaled).convert('RGB').resize((512, 512), Image.BICUBIC)
         scale_x = float(png.width) / scaled.shape[0]
         scale_y = float(png.height) / scaled.shape[1]
+
+        line_start_x = old_x + circle_r2 * dir_x / scale_y
+        line_start_y = old_y + circle_r2 * dir_y / scale_y
+        line_end_x = new_x - circle_r * dir_x / scale_y
+        line_end_y = new_y - circle_r * dir_y / scale_y
+
+        arrow_a_x = line_end_x - 10 * (dir_y + dir_x) / scale_x
+        arrow_a_y = line_end_y + 10 * (-dir_y + dir_x) / scale_y
+        arrow_b_x = line_end_x - 10 * (-dir_y + dir_x) / scale_x
+        arrow_b_y = line_end_y + 10 * (-dir_y - dir_x) / scale_y
+
         draw = ImageDraw.Draw(png)
-        draw.ellipse((scale_x * (old_x-circle_r), scale_y * (old_y-circle_r), scale_x * (old_x + circle_r), scale_y * (old_y + circle_r)), outline='blue')
-        draw.ellipse((scale_x * (new_x-circle_r), scale_y * (new_y-circle_r), scale_x * (new_x + circle_r), scale_y * (new_y + circle_r)), outline='red')
-        
+        draw.ellipse((scale_x * new_x-circle_r, scale_y * new_y-circle_r, scale_x * new_x + circle_r, scale_y * new_y + circle_r), fill='red')
+        draw.ellipse((scale_x * old_x-circle_r2, scale_y * old_y-circle_r2, scale_x * old_x + circle_r2, scale_y * old_y + circle_r2), outline='blue')
+
+        if delta_l * scale_x > circle_r + circle_r2:
+            draw.line((scale_x * line_start_x, scale_y * line_start_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
+            draw.line((scale_x * arrow_a_x, scale_y * arrow_a_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
+            draw.line((scale_x * arrow_b_x, scale_y * arrow_b_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
+
         png = ImageOps.flip(png)
         draw = ImageDraw.Draw(png)
 
@@ -115,13 +139,15 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
         draw.line(line, 'white')
 
         font = ImageFont.truetype('DejaVuSansMono.ttf', 12)
-        draw.rectangle((2,2,160,35), 'black')
         draw.text(((line[0] + line[2]) / 2 - 2, png.height - 20),"1'",'white', font=font)
-        draw.text((5, 5), 'J' + out_year + '  RA: ' + sexagesimal(frame_coords[0] / 15), 'white', font=font)
-        draw.text((5, 20), 'J' + out_year + ' Dec: ' + sexagesimal(frame_coords[1]), 'white', font=font)
+
+#        draw.rectangle((2,2,170,35), 'black')
+#        draw.text((5, 5), 'J' + out_year + '  RA: ' + sexagesimal(frame_coords[0] / 15), 'white', font=font)
+#        draw.text((5, 20), 'J' + out_year + ' Dec: ' + sexagesimal(frame_coords[1]), 'white', font=font)
         png.save(out_path, 'PNG', clobber=True)
 
-    os.remove(filename)
+    print(filename)
+#    os.remove(filename)
 
 if __name__ == '__main__':
     surveys = ['poss2ukstu_red', 'poss2ukstu_ir', 'poss2ukstu_blue', 'poss1_blue', 'poss1_red',
@@ -138,10 +164,11 @@ if __name__ == '__main__':
     parser.add_argument('width', help='Finding chart width (arcmin)')
     parser.add_argument('height', help='Finding chart height (arcmin)')
     parser.add_argument('survey', choices=surveys, help='Survey to use for base image')
+    parser.add_argument('outname', help='Output file name')
 
 #   TODO: argparse breaks when we pass a negative dec argument...
-    args = parser.parse_args()
-    generate_finding_chart(args.out_year, args.ra, args.dec, args.epoch, args.pmra, args.pmdec, args.width, args.height, args.survey, 'test.png')
-#    a = sys.argv
-#    generate_finding_chart(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], 'test.png')
+#    args = parser.parse_args()
+#    generate_finding_chart(args.out_year, args.ra, args.dec, args.epoch, args.pmra, args.pmdec, args.width, args.height, args.survey, args.outname)
+    a = sys.argv
+    generate_finding_chart(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10])
 
