@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <title>Finding Chart Generator</title>
+    <link href="http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic" rel="stylesheet">
+    <link href="{{ url_for('static', filename='toolkit-inverse.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='application.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-12 content">
+          <h1>Finding chart generator</h1>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-sm-12 content">
+          <form id="generate" role="form" class="form form-horizontal">
+            <div class="form-group">
+              <label for="coordinates">Enter targets (&lt;Name&gt; &lt;RA&gt; &lt;Dec&gt; &lt;RA-PM&gt; &lt;Dec-PM&gt; &lt;input-epoch&gt;):</label>
+              <textarea name="coords" class="form-control input-block" rows="5"></textarea>
+              <span>RA and Dec should be in sexagesimal format, proper motions in arcsec per year.</span>
+            </div>
+            <div class="form-group">
+              <label for="epoch" class="control-label col-sm-2">Output epoch:</label>
+              <input type="text" name="epoch" class="form-control input-block col-sm-2" value="2000.0">
+
+              <label for="size" class="control-label col-sm-2">Size (arcmin):</label>
+              <input type="text" name="size" class="form-control input-block col-sm-2" value="14">
+            </div>
+            <div class="form-group">
+              <label for="survey" class="control-label col-sm-2">Source survey:</label>
+              <select name="survey" class="form-control input-block col-sm-2">
+                <option>poss2ukstu_red</option>
+                <option>poss2ukstu_ir</option>
+                <option selected>poss2ukstu_blue</option>
+                <option>poss1_blue</option>
+                <option>poss1_red</option>
+                <option>quickv</option>
+                <option>phase2_gsc2</option>
+                <option>phase2_gsc1</option>
+              </select>
+              <label for="type" class="control-label col-sm-2">Chart type:</label>
+              <div class="radio col-sm-4">
+                <label><input type="radio" name="type" id="type-annotated" value="annotated" checked>Annotated&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                <label><input type="radio" name="type" id="type-raw" value="raw">Raw image</label>
+              </div>
+            </div>
+            <input type="submit" value="Generate" class="btn btn-primary" id="generate" /><span id="error" class="label-danger"></span>
+          </form>
+        </div>
+      </div>
+    </div>
+  <script src="{{ url_for('static', filename='toolkit.js') }}"></script>
+  <script>
+
+var testSexagesimal = /^[+-]?\d+:\d+:\d+(\.\d+)?$/;
+
+function setup() {
+  $('#generate').submit(function(event) {
+    event.preventDefault();
+    var epoch = $("input[name='epoch']").val();
+    var size = $("input[name='size']").val();
+    var survey = $("select[name='survey']").val();
+    var type = $("input[name='type']:checked").val();
+    var coords = $("textarea[name='coords']").val().split('\n');
+
+
+    // TODO: Validate size and epoch
+
+    $('#error').html('');
+
+    var url_base = 'generate?survey='+survey+'&size='+size+'&outepoch='+epoch
+    var urls = [];
+    for (var i in coords)
+    {
+      var parts = coords[i].split(/\s+/);
+      var line = Number(i) + 1;
+
+      // Skip blank lines
+      if (parts.length == 1 && parts[0] == '')
+        continue;
+
+      var name = parts[0];
+      var ra = parts[1];
+      var dec = parts[2];
+      var rapm = parts[3];
+      var decpm = parts[4];
+      var epoch = parts[5];
+
+      if (ra === undefined || !testSexagesimal.test(ra)) {
+        $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH:MM:SS');
+        break;
+      }
+
+      if (dec === undefined || !testSexagesimal.test(dec)) {
+        $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as DD:MM:SS');
+        break;
+      }
+
+      if (rapm === undefined || parseFloat(rapm) != rapm) {
+        $('#error').html('Line ' + line + ': Unable to parse "' + rapm + '" as number');
+        break;
+      }
+
+      if (decpm === undefined || parseFloat(decpm) != decpm) {
+        $('#error').html('Line ' + line + ': Unable to parse "' + decpm + '" as number');
+        break;
+      }
+
+      if (epoch === undefined || parseFloat(epoch) != epoch) {
+        $('#error').html('Line ' + line + ': Unable to parse "' + epoch + '" as number');
+        break;
+      }
+
+      urls.push(url_base +'&ra='+ra+'&dec='+dec+'&rapm='+rapm+'&decpm='+decpm+'&epoch='+epoch)
+    }
+    console.log(urls);
+  });
+}
+
+$(document).ready(setup);
+  </script>
+  </body>
+</html>
