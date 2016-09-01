@@ -26,6 +26,7 @@ from PIL import Image, ImageOps, ImageDraw, ImageFont
 from astropy import wcs
 from astropy.io import fits
 
+from flask import abort
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -135,9 +136,12 @@ def input_display():
 @app.route('/generate')
 def generate_chart():
     print(request.args)
-    chart = generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
-    output = io.BytesIO()
-    chart.save(output, format='PNG')
-    output.seek(0)
+    try:
+        chart = generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
+        output = io.BytesIO()
+        chart.save(output, format='PNG')
+        output.seek(0)
 
-    return send_file(output, attachment_filename='chart.png', mimetype='image/png')
+        return send_file(output, attachment_filename='chart.png', mimetype='image/png')
+    except:
+        abort(404)

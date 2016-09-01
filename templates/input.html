@@ -3,6 +3,8 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Generates finding charts from the digitized sky survey, accounting for proper motion of the target.">
+    <meta name="author" content="Paul Chote">
     <meta charset="utf-8">
     <title>Finding Chart Generator</title>
     <link href="http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic" rel="stylesheet">
@@ -17,8 +19,6 @@
       .thumb-label { font-size: 10px; margin: 3px 0; color: #fff; }
       .popover { max-width: none; }
       #download { margin-right: 10px; }
-      #generate { color: #51586a; }
-      #generate:hover { color: #cfd2da;}
     </style>
   </head>
   <body>
@@ -127,7 +127,7 @@ function generateChart(t) {
   $('#thumbrow').append(thumbContainer);
 
   var img = new Image();
-  img.addEventListener("load", function() {
+  img.addEventListener('load', function() {
     chartContext.drawImage(img, chartImageX, chartImageY);
 
     thumbImage.removeClass('thumb-loading');
@@ -136,7 +136,16 @@ function generateChart(t) {
     thumbImage.height(128);
   }, false);
 
-  // TODO: Handle generation failure
+  img.addEventListener('error', function() {
+    chartContext.fillStyle = '#fff';
+    chartContext.fillRect(chartImageX+2, chartImageY+2, 508, 508);
+    chartContext.font = '28px serif';
+    chartContext.textAlign = 'center'
+    chartContext.fillStyle = '#000';
+    chartContext.fillText('Source Image Unavailable', chartWidth / 2, chartImageY + 256);
+    thumbImage.prop('src', '{{ url_for('static', filename='failed.png') }}');
+  }, false);
+
   img.src = url;
 }
 
@@ -169,7 +178,25 @@ function setup() {
     var type = $("input[name='type']:checked").val();
     var coords = $("textarea[name='coords']").val().split('\n');
 
-    // TODO: Validate size and epoch
+    if (parseFloat(size) != size) {
+      $('#error').html('Unable to parse "' + size + '" as a number');
+      return;
+    }
+
+    if (size <= 1 || size > 100) {
+      $('#error').html('Field size must be between 1 and 100 arcmin');
+      return;
+    }
+
+    if (parseFloat(outepoch) != outepoch) {
+      $('#error').html('Unable to parse "' + outepoch + '" as a number');
+      return;
+    }
+
+    if (outepoch <= 1900 || outepoch > 2100) {
+      $('#error').html('Observing epoch must be between 1900 and 2100');
+      return;
+    }
 
     $('#error').html('');
     $('#thumbrow').empty();
@@ -246,7 +273,7 @@ function setup() {
     if (targets.length == 0)
       return;
 
-    $('#generate').removeClass('btn-primary').text('Regenerate');
+    $('#generate').removeClass('btn-primary').addClass('btn-default').text('Regenerate');
     $('#download').show();
     for (i in targets)
       generateChart(targets[i]);
