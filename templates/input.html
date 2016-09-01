@@ -9,11 +9,16 @@
     <link href="{{ url_for('static', filename='toolkit-inverse.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='application.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='jszip.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='FileSaver.min.js') }}"></script>
     <style>
       .thumb-panel { padding:0px 5px; height: 156px; width: 140px; overflow: hidden; margin: auto auto; }
       .thumb-loading { position: absolute; left: 54px; bottom:54px; }
-      .thumb-label { font-size: 10px; margin: 3px 0; }
+      .thumb-label { font-size: 10px; margin: 3px 0; color: #fff; }
       .popover { max-width: none; }
+      #download { margin-right: 10px; }
+      #generate { color: #51586a; }
+      #generate:hover { color: #cfd2da;}
     </style>
   </head>
   <body>
@@ -24,8 +29,7 @@
         </div>
       </div>
       <div class="row m-b">
-        <div class="col-sm-12 content">
-          <form id="generate" role="form" class="form form-horizontal">
+        <div class="col-sm-12 content form form-horizontal">
             <div class="form-group">
               <label for="coordinates">Enter targets (&lt;Name&gt; &lt;RA&gt; &lt;Dec&gt; &lt;RA-PM&gt; &lt;Dec-PM&gt; &lt;input-epoch&gt; &lt;comment&gt;):</label>
               <textarea name="coords" class="form-control input-block" style="height: 350px"></textarea>
@@ -56,19 +60,17 @@
                 <label><input type="radio" name="type" id="type-raw" value="raw">Raw image</label>
               </div>
             </div>
-            <input type="submit" value="Generate" class="btn btn-primary" id="generate" /><span id="error" class="label-danger"></span>
-          </form>
+            <button class="btn btn-primary" id="download">Download Zip</button><button class="btn btn-primary" id="generate">Generate</button>&nbsp;<span id="error" class="label-danger"></span>
         </div>
       </div>
-      <div id="thumbrow" class="row m-b">
-      </div>
-      <div id="chartrow" class="row">
-      </div>
+      <div id="thumbrow" class="row m-b"></div>
+      <div id="chartrow" class="row"></div>
     </div>
   <script src="{{ url_for('static', filename='toolkit.js') }}"></script>
   <script>
 
 var testSexagesimal = /^[+-]?\d+:\d+:\d+(\.\d+)?$/;
+var targetData = [];
 
 function generateChart(t) {
   var url = 'generate?survey='+t.survey+'&size='+t.size+'&outepoch='+t.outepoch+'&ra='+t.ra+'&dec='+t.dec+'&rapm='+t.rapm+'&decpm='+t.decpm+'&epoch='+t.epoch
@@ -80,10 +82,21 @@ function generateChart(t) {
 
   var chartCanvas = $('<canvas/>').prop({width: chartWidth, height: chartHeight});
   var chartContext = chartCanvas[0].getContext('2d');
+  targetData.push([t, chartCanvas[0]]);
+
+  chartContext.fillStyle = '#fff';
+  chartContext.fillRect(0, 0, chartWidth, chartHeight);
+
+  chartContext.strokeStyle = '#000';
+  chartContext.lineWidth = 2;
+  chartContext.strokeRect(chartImageX+1, chartImageY+1, 510, 510);
+  chartContext.font = '28px serif';
+  chartContext.textAlign = 'center'
+  chartContext.fillStyle = '#000';
+  chartContext.fillText('Generating...', chartWidth / 2, chartImageY + 256);
+
   if (t.annotate) {
-    chartContext.fillStyle = "#000000";
-    chartContext.font = "18px serif";
-    chartContext.textAlign = 'center'
+    chartContext.font = '18px serif';
     chartContext.fillText(t.name, chartWidth / 2, 15);
 
     chartContext.fillText('J2000 coordinates at J' + t.outepoch, chartWidth / 2, chartHeight - 60);
@@ -95,7 +108,6 @@ function generateChart(t) {
   }
 
   var thumbContainer = $('<div>', {id: '', 'class': 'col-md-2 col-sm-4 col-xs-6 m-b'});
-
   var thumbBorder = $('<div>', {'class': 'btn list-group list-group-item thumb-panel'});
   thumbBorder.popover({
       trigger : 'hover',
@@ -125,7 +137,6 @@ function generateChart(t) {
   }, false);
 
   // TODO: Handle generation failure
-  console.log(url);
   img.src = url;
 }
 
@@ -133,8 +144,25 @@ function setup() {
   // Calculate the current fractional year
   var now = new Date();
   $('#outepoch').val((now.getUTCFullYear() + now.getUTCMonth() / 12.0).toFixed(2));
-  $('#generate').submit(function(event) {
-    event.preventDefault();
+
+  $('#download').hide();
+  $('#download').click(function() {
+    if (targetData.length == 0)
+      return;
+
+    var zip = new JSZip();
+    for (var i in targetData) {
+      var data = new Image();
+      data.src = targetData[i][1].toDataURL();
+      zip.file(targetData[i][0].name + '.png', data.src.substr(data.src.indexOf(',')+1), {base64: true});
+    }
+
+    zip.generateAsync({type:'blob'}).then(function (blob) {
+      saveAs(blob, 'charts.zip');
+    });
+  });
+
+  $('#generate').click(function() {
     var outepoch = $("input[name='outepoch']").val();
     var size = $("input[name='size']").val();
     var survey = $("select[name='survey']").val();
@@ -146,6 +174,7 @@ function setup() {
     $('#error').html('');
     $('#thumbrow').empty();
     $('#chartrow').empty();
+    targetData = [];
 
     var targets = [];
     for (var i in coords)
@@ -166,27 +195,27 @@ function setup() {
 
       if (ra === undefined || !testSexagesimal.test(ra)) {
         $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH:MM:SS');
-        break;
+        return;
       }
 
       if (dec === undefined || !testSexagesimal.test(dec)) {
         $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as DD:MM:SS');
-        break;
+        return;
       }
 
       if (rapm === undefined || parseFloat(rapm) != rapm) {
         $('#error').html('Line ' + line + ': Unable to parse "' + rapm + '" as number');
-        break;
+        return;
       }
 
       if (decpm === undefined || parseFloat(decpm) != decpm) {
         $('#error').html('Line ' + line + ': Unable to parse "' + decpm + '" as number');
-        break;
+        return;
       }
 
       if (epoch === undefined || parseFloat(epoch) != epoch) {
         $('#error').html('Line ' + line + ': Unable to parse "' + epoch + '" as number');
-        break;
+        return;
       }
 
       // Enumerate through line to find start of comment (if it exists)
@@ -214,6 +243,11 @@ function setup() {
       });
     }
 
+    if (targets.length == 0)
+      return;
+
+    $('#generate').removeClass('btn-primary').text('Regenerate');
+    $('#download').show();
     for (i in targets)
       generateChart(targets[i]);
   });
