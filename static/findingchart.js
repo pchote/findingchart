@@ -28,10 +28,6 @@ function generateChart(t) {
     chartContext.font = '18px serif';
     chartContext.fillText(t.name, chartWidth / 2, 15);
 
-    chartContext.fillText('J2000 coordinates at J' + t.outepoch, chartWidth / 2, chartHeight - 60);
-    chartContext.fillText('RA: ' + t.ra, chartWidth / 4, chartHeight - 35);
-    chartContext.fillText('Dec: ' + t.dec, 3 * chartWidth / 4, chartHeight - 35);
-
     if (t.comment)
       chartContext.fillText(t.comment, chartWidth / 2, chartHeight - 5);
   }
@@ -55,48 +51,63 @@ function generateChart(t) {
 
   $('#thumbrow').append(thumbContainer);
 
-  var img = new Image();
-  img.addEventListener('load', function() {
-    chartContext.drawImage(img, chartImageX, chartImageY);
+  console.log(url);
+  $.ajax({
+    type: "GET",
+    url: url,
+    statusCode: {
+      404: function() {
+        chartContext.fillStyle = '#fff';
+        chartContext.fillRect(chartImageX+2, chartImageY+2, 508, 508);
+        chartContext.font = '28px serif';
+        chartContext.textAlign = 'center'
+        chartContext.fillStyle = '#000';
+        chartContext.fillText('Source Image Unavailable', chartWidth / 2, chartImageY + 256);
+        thumbImage.prop('src', failedURL);
+      }
+    }
+  }).done(function(json) {
+    console.log(json);
 
-    // Direction indicator
-    chartContext.lineWidth = 2;
-    chartContext.strokeStyle = '#0000FF';
-    chartContext.beginPath();
-    chartContext.moveTo(chartImageX + 502, chartImageY + 462);
-    chartContext.lineTo(chartImageX + 502, chartImageY + 502);
-    chartContext.lineTo(chartImageX + 462, chartImageY + 502);
-    chartContext.stroke();
+    thumbImage.load(function () {
+        thumbImage.removeClass('thumb-loading');
+        thumbImage.width(128);
+        thumbImage.height(128);
 
-    chartContext.fillStyle = '#0000FF';
-    chartContext.font = '12px sans-serif';
-    chartContext.fillText('E', chartImageX + 455, chartImageY + 506);
-    chartContext.fillText('N', chartImageX + 502, chartImageY + 457);
+        chartContext.drawImage(thumbImage[0], chartImageX, chartImageY);
 
-    // Scale indicator
-    chartContext.beginPath();
-    chartContext.moveTo(chartImageX + 10, chartImageY + 502);
-    chartContext.lineTo(chartImageX + 10 + 512 / t.size, chartImageY + 502);
-    chartContext.stroke();
-    chartContext.fillText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
+        // Direction indicator
+        chartContext.lineWidth = 2;
+        chartContext.strokeStyle = '#0000FF';
+        chartContext.beginPath();
+        chartContext.moveTo(chartImageX + 502, chartImageY + 462);
+        chartContext.lineTo(chartImageX + 502, chartImageY + 502);
+        chartContext.lineTo(chartImageX + 462, chartImageY + 502);
+        chartContext.stroke();
 
-    thumbImage.removeClass('thumb-loading');
-    thumbImage.prop('src', url);
-    thumbImage.width(128);
-    thumbImage.height(128);
-  }, false);
+        chartContext.fillStyle = '#0000FF';
+        chartContext.font = '12px sans-serif';
+        chartContext.fillText('E', chartImageX + 455, chartImageY + 506);
+        chartContext.fillText('N', chartImageX + 502, chartImageY + 457);
 
-  img.addEventListener('error', function() {
-    chartContext.fillStyle = '#fff';
-    chartContext.fillRect(chartImageX+2, chartImageY+2, 508, 508);
-    chartContext.font = '28px serif';
-    chartContext.textAlign = 'center'
-    chartContext.fillStyle = '#000';
-    chartContext.fillText('Source Image Unavailable', chartWidth / 2, chartImageY + 256);
-    thumbImage.prop('src', failedURL);
-  }, false);
+        // Scale indicator
+        chartContext.beginPath();
+        chartContext.moveTo(chartImageX + 10, chartImageY + 502);
+        chartContext.lineTo(chartImageX + 10 + 512 / t.size, chartImageY + 502);
+        chartContext.stroke();
+        chartContext.fillText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
 
-  img.src = url;
+        if (t.annotate) {
+          chartContext.font = '18px serif';
+          chartContext.fillStyle = '#000';
+          chartContext.fillText('J2000 coordinates at J' + t.outepoch, chartWidth / 2, chartHeight - 60);
+          chartContext.fillText('RA: ' + json.ra, chartWidth / 4, chartHeight - 35);
+          chartContext.fillText('Dec: ' + json.dec, 3 * chartWidth / 4, chartHeight - 35);
+        }
+    });
+
+    thumbImage.prop('src', json.data);
+  });
 }
 
 function setup() {

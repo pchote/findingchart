@@ -15,6 +15,7 @@
 # pylint: disable=invalid-name
 
 import argparse
+import base64
 import datetime
 import io
 import math
@@ -28,6 +29,7 @@ from astropy.io import fits
 
 from flask import abort
 from flask import Flask
+from flask import jsonify
 from flask import render_template
 from flask import request
 from flask import send_file
@@ -96,6 +98,20 @@ def parse_sexagesimal(string):
 
     return a + b / 60 + c / 3600
 
+def sexagesimal(angle):
+    """Formats a decimal number in sexagesimal format"""
+    negative = angle < 0
+    angle = abs(angle)
+
+    degrees = int(angle)
+    angle = (angle - degrees) * 60
+    minutes = int(angle)
+    seconds = (angle - minutes) * 60
+
+    if negative:
+        degrees *= -1
+
+    return '{:d}:{:02d}:{:05.2f}'.format(degrees, minutes, seconds)
 def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees, delta_yr):
     ra = ra_degrees + float(pm_ra_degrees) / math.cos(dec_degrees * math.pi / 180) * delta_yr
     dec = dec_degrees + float(pm_dec_degrees) * delta_yr
@@ -164,7 +180,14 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
                 draw.line((scale_x * arrow_a_x, scale_y * arrow_a_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
                 draw.line((scale_x * arrow_b_x, scale_y * arrow_b_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
 
-            return ImageOps.flip(png)
+            # Generate JSON output
+            output = io.BytesIO()
+            ImageOps.flip(png).save(output, format='PNG')
+            output.seek(0)
+            return jsonify(
+                ra=sexagesimal(ra_target / 15),
+                dec=sexagesimal(dec_target),
+                data='data:image/png;base64,' + base64.b64encode(output.read()).decode())
     finally:
         os.remove(filename)
 
@@ -175,14 +198,10 @@ def input_display():
     return render_template('input.html')
 
 @app.route('/generate')
-def generate_chart():
+def generate_chart_json():
     print(request.args)
     try:
-        chart = generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
-        output = io.BytesIO()
-        chart.save(output, format='PNG')
-        output.seek(0)
-
-        return send_file(output, attachment_filename='chart.png', mimetype='image/png')
-    except:
+        return generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
+    except Exception as e:
+        print(e)
         abort(404)

@@ -69,7 +69,7 @@
     <script src="{{ url_for('static', filename='toolkit.js') }}"></script>
     <script src="{{ url_for('static', filename='findingchart.js') }}"></script>
     <script>
-      var generateURL = '{{ url_for('generate_chart') }}';
+      var generateURL = '{{ url_for('generate_chart_json') }}';
       var loadingURL = '{{ url_for('static', filename='loading.gif') }}';
       var failedURL = '{{ url_for('static', filename='failed.png') }}';
 
