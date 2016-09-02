@@ -133,8 +133,8 @@ function setup() {
       return;
     }
 
-    if (size <= 1 || size > 100) {
-      $('#error').html('Field size must be between 1 and 100 arcmin');
+    if (size < 2 || size > 60) {
+      $('#error').html('Field size must be between 2 and 60 arcmin');
       return;
     }
 
