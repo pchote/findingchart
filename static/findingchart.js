@@ -56,7 +56,7 @@ function generateChart(t) {
     type: "GET",
     url: url,
     statusCode: {
-      404: function() {
+      500: function() {
         chartContext.fillStyle = '#fff';
         chartContext.fillRect(chartImageX+2, chartImageY+2, 508, 508);
         chartContext.font = '28px serif';
@@ -96,6 +96,50 @@ function generateChart(t) {
         chartContext.lineTo(chartImageX + 10 + 512 / t.size, chartImageY + 502);
         chartContext.stroke();
         chartContext.fillText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
+
+        // Original source position
+        var oldX = chartImageX + json.data_pos[0];
+        var oldY = chartImageY + json.data_pos[1];
+        chartContext.lineWidth = 1;
+        chartContext.strokeStyle = '#0000FF';
+        chartContext.beginPath();
+        chartContext.arc(oldX, oldY, json.indicator_size, 0, 2 * Math.PI);
+        chartContext.stroke();
+
+        // New source position
+        var newX = chartImageX + json.observing_pos[0];
+        var newY = chartImageY + json.observing_pos[1];
+        chartContext.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        chartContext.beginPath();
+        chartContext.arc(newX, newY, json.indicator_size, 0, 2 * Math.PI);
+        chartContext.fill();
+
+        // Connecting arrow
+        var deltaX = newX - oldX;
+        var deltaY = newY - oldY;
+        var deltaL = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (deltaL > 2.5 * json.indicator_size) {
+          var dirX = deltaX / deltaL;
+          var dirY = deltaY / deltaL;
+
+          var lineStartX = oldX + json.indicator_size * dirX;
+          var lineStartY = oldY + json.indicator_size * dirY;
+          var lineEndX = newX - json.indicator_size * dirX;
+          var lineEndY = newY - json.indicator_size * dirY;
+
+          var arrowAX = lineEndX - json.indicator_size * (dirY + dirX)
+          var arrowAY = lineEndY + json.indicator_size * (-dirY + dirX)
+          var arrowBX = lineEndX - json.indicator_size * (-dirY + dirX)
+          var arrowBY = lineEndY + json.indicator_size * (-dirY - dirX)
+
+          chartContext.beginPath();
+          chartContext.moveTo(lineStartX, lineStartY);
+          chartContext.lineTo(lineEndX, lineEndY);
+          chartContext.moveTo(arrowAX, arrowAY);
+          chartContext.lineTo(lineEndX, lineEndY);
+          chartContext.lineTo(arrowBX, arrowBY);
+          chartContext.stroke();
+        }
 
         if (t.annotate) {
           chartContext.font = '18px serif';

@@ -23,17 +23,14 @@ import urllib.request
 import numpy
 import os
 import sys
-from PIL import Image, ImageOps, ImageDraw, ImageFont
+from PIL import Image, ImageOps
 from astropy import wcs
 from astropy.io import fits
-
 from flask import abort
 from flask import Flask
 from flask import jsonify
 from flask import render_template
 from flask import request
-from flask import send_file
-
 import sep
 
 def estimate_half_radius(image, fallback):
@@ -147,46 +144,23 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
             old_x, old_y = w.wcs_world2pix(numpy.array([frame_coords], numpy.float_), 0, ra_dec_order=True)[0]
             new_x, new_y = w.wcs_world2pix(numpy.array([[ra_target, dec_target]], numpy.float_), 0, ra_dec_order=True)[0]
 
-            delta_x = new_x - old_x
-            delta_y = new_y - old_y
-            delta_l = math.sqrt(delta_x * delta_x + delta_y * delta_y)
-            dir_x = delta_x / delta_l
-            dir_y = delta_y / delta_l
-
             fluxrad = estimate_half_radius(frame.data.astype(float), 2)
             scaled = rescale_image_data(frame.data, 1, 99.5)
-            png = Image.fromarray(scaled).convert('RGB').resize((512, 512), Image.BICUBIC)
+            png = ImageOps.flip(Image.fromarray(scaled).convert('RGB').resize((512, 512), Image.BICUBIC))
             scale_x = float(png.width) / scaled.shape[0]
             scale_y = float(png.height) / scaled.shape[1]
-
-            circle_r = circle_r2 = 3 * fluxrad * scale_x
-
-            line_start_x = old_x + circle_r2 * dir_x / scale_y
-            line_start_y = old_y + circle_r2 * dir_y / scale_y
-            line_end_x = new_x - circle_r * dir_x / scale_y
-            line_end_y = new_y - circle_r * dir_y / scale_y
-
-            arrow_a_x = line_end_x - circle_r * (dir_y + dir_x) / scale_x
-            arrow_a_y = line_end_y + circle_r * (-dir_y + dir_x) / scale_y
-            arrow_b_x = line_end_x - circle_r * (-dir_y + dir_x) / scale_x
-            arrow_b_y = line_end_y + circle_r * (-dir_y - dir_x) / scale_y
-
-            draw = ImageDraw.Draw(png)
-            draw.ellipse((scale_x * new_x-circle_r, scale_y * new_y-circle_r, scale_x * new_x + circle_r, scale_y * new_y + circle_r), outline='red')
-            draw.ellipse((scale_x * old_x-circle_r2, scale_y * old_y-circle_r2, scale_x * old_x + circle_r2, scale_y * old_y + circle_r2), outline='blue')
-
-            if delta_l * scale_x > circle_r + circle_r2:
-                draw.line((scale_x * line_start_x, scale_y * line_start_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
-                draw.line((scale_x * arrow_a_x, scale_y * arrow_a_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
-                draw.line((scale_x * arrow_b_x, scale_y * arrow_b_y, scale_x * line_end_x, scale_y * line_end_y), 'blue')
+            indicator_size = 3 * fluxrad * scale_x
 
             # Generate JSON output
             output = io.BytesIO()
-            ImageOps.flip(png).save(output, format='PNG')
+            png.save(output, format='PNG')
             output.seek(0)
             return jsonify(
                 ra=sexagesimal(ra_target / 15),
                 dec=sexagesimal(dec_target),
+                data_pos=[old_x * scale_x, 512 - old_y * scale_y],
+                observing_pos=[new_x * scale_x, 512 - new_y * scale_y],
+                indicator_size=indicator_size,
                 data='data:image/png;base64,' + base64.b64encode(output.read()).decode())
     finally:
         os.remove(filename)
@@ -199,9 +173,7 @@ def input_display():
 
 @app.route('/generate')
 def generate_chart_json():
-    print(request.args)
     try:
         return generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
     except Exception as e:
-        print(e)
-        abort(404)
+        abort(500)
