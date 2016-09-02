@@ -59,6 +59,27 @@ function generateChart(t) {
   img.addEventListener('load', function() {
     chartContext.drawImage(img, chartImageX, chartImageY);
 
+    // Direction indicator
+    chartContext.lineWidth = 2;
+    chartContext.strokeStyle = '#0000FF';
+    chartContext.beginPath();
+    chartContext.moveTo(chartImageX + 502, chartImageY + 462);
+    chartContext.lineTo(chartImageX + 502, chartImageY + 502);
+    chartContext.lineTo(chartImageX + 462, chartImageY + 502);
+    chartContext.stroke();
+
+    chartContext.fillStyle = '#0000FF';
+    chartContext.font = '12px sans-serif';
+    chartContext.fillText('E', chartImageX + 455, chartImageY + 506);
+    chartContext.fillText('N', chartImageX + 502, chartImageY + 457);
+
+    // Scale indicator
+    chartContext.beginPath();
+    chartContext.moveTo(chartImageX + 10, chartImageY + 502);
+    chartContext.lineTo(chartImageX + 10 + 512 / t.size, chartImageY + 502);
+    chartContext.stroke();
+    chartContext.fillText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
+
     thumbImage.removeClass('thumb-loading');
     thumbImage.prop('src', url);
     thumbImage.width(128);
