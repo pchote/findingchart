@@ -73,7 +73,7 @@ var testSexagesimal = /^[+-]?\d+:\d+:\d+(\.\d+)?$/;
 var targetData = [];
 
 function generateChart(t) {
-  var url = 'generate?survey='+t.survey+'&size='+t.size+'&outepoch='+t.outepoch+'&ra='+t.ra+'&dec='+t.dec+'&rapm='+t.rapm+'&decpm='+t.decpm+'&epoch='+t.epoch
+  var url = '{{ url_for('generate_chart') }}?survey='+t.survey+'&size='+t.size+'&outepoch='+t.outepoch+'&ra='+t.ra+'&dec='+t.dec+'&rapm='+t.rapm+'&decpm='+t.decpm+'&epoch='+t.epoch
 
   var chartWidth = t.annotate ? 522 : 512;
   var chartHeight = t.annotate ? 612 : 512;
