@@ -32,6 +32,48 @@ from flask import render_template
 from flask import request
 from flask import send_file
 
+import sep
+
+def estimate_half_radius(image, fallback):
+    """Estimates the half-width at half maximum
+       returns fallback if it can't identify at least 10 sources"""
+    bkg = sep.Background(image)
+    subtracted = image - bkg
+
+    thresh = 5 * bkg.globalrms
+    raw_objects = sep.extract(subtracted, thresh)
+    radius = []
+    for star in raw_objects:
+        # Discard spuriously small sources
+        if star['npix'] < 16:
+            continue
+
+        x = star['x']
+        y = star['y']
+        a = star['a']
+        b = star['b']
+        theta = star['theta']
+        kronrad, flag = sep.kron_radius(subtracted, x, y, a, b, theta, 6.0)
+        if flag != 0:
+            continue
+
+        flux, _, flag = sep.sum_ellipse(subtracted, x, y, a, b, theta, 2.5 * kronrad,
+                                        subpix=0)
+        if flag != 0:
+            continue
+
+        r, flag = sep.flux_radius(subtracted, x, y, 6.0 * a, 0.5, normflux=flux, subpix=5)
+        if flag != 0:
+            continue
+
+        radius.append(r)
+
+    # Require at least 10 objects for a more robust estimation
+    if len(radius) > 10:
+        return numpy.median(radius)
+
+    return fallback
+
 def rescale_image_data(data, clip_low, clip_high):
     """ Returns a normalised array where clip_low percent of the pixels are 0 and
         clip_high percent of the pixels are 255
@@ -60,8 +102,6 @@ def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees,
     return (ra, dec)
 
 def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, width, height, survey):
-    circle_r = 10
-    circle_r2 = 10
     ra_j2000_degrees = parse_sexagesimal(in_ra) * 15
     dec_j2000_degrees = parse_sexagesimal(in_dec)
     ra_pm_degrees = float(ra_pm) / 3600
@@ -77,7 +117,6 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
     try:
         with fits.open(filename) as hdulist:
             frame = hdulist[0]
-            arcsec_per_px = frame.header['PLTSCALE'] * frame.header['XPIXELSZ'] / 1000
 
             # Headers can contain bogus time values (e.g. 93 minutes), so only consider year part
             frame_date = datetime.datetime.strptime(frame.header['DATE-OBS'][0:11], '%Y-%m-%dT')
@@ -98,24 +137,26 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, widt
             dir_x = delta_x / delta_l
             dir_y = delta_y / delta_l
 
-
+            fluxrad = estimate_half_radius(frame.data.astype(float), 2)
             scaled = rescale_image_data(frame.data, 1, 99.5)
             png = Image.fromarray(scaled).convert('RGB').resize((512, 512), Image.BICUBIC)
             scale_x = float(png.width) / scaled.shape[0]
             scale_y = float(png.height) / scaled.shape[1]
+
+            circle_r = circle_r2 = 3 * fluxrad * scale_x
 
             line_start_x = old_x + circle_r2 * dir_x / scale_y
             line_start_y = old_y + circle_r2 * dir_y / scale_y
             line_end_x = new_x - circle_r * dir_x / scale_y
             line_end_y = new_y - circle_r * dir_y / scale_y
 
-            arrow_a_x = line_end_x - 10 * (dir_y + dir_x) / scale_x
-            arrow_a_y = line_end_y + 10 * (-dir_y + dir_x) / scale_y
-            arrow_b_x = line_end_x - 10 * (-dir_y + dir_x) / scale_x
-            arrow_b_y = line_end_y + 10 * (-dir_y - dir_x) / scale_y
+            arrow_a_x = line_end_x - circle_r * (dir_y + dir_x) / scale_x
+            arrow_a_y = line_end_y + circle_r * (-dir_y + dir_x) / scale_y
+            arrow_b_x = line_end_x - circle_r * (-dir_y + dir_x) / scale_x
+            arrow_b_y = line_end_y + circle_r * (-dir_y - dir_x) / scale_y
 
             draw = ImageDraw.Draw(png)
-            draw.ellipse((scale_x * new_x-circle_r, scale_y * new_y-circle_r, scale_x * new_x + circle_r, scale_y * new_y + circle_r), fill='red')
+            draw.ellipse((scale_x * new_x-circle_r, scale_y * new_y-circle_r, scale_x * new_x + circle_r, scale_y * new_y + circle_r), outline='red')
             draw.ellipse((scale_x * old_x-circle_r2, scale_y * old_y-circle_r2, scale_x * old_x + circle_r2, scale_y * old_y + circle_r2), outline='blue')
 
             if delta_l * scale_x > circle_r + circle_r2:
