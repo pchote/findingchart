@@ -77,15 +77,27 @@ function generateChart(t) {
         chartContext.drawImage(thumbImage[0], chartImageX, chartImageY);
 
         // Survey source
-        chartContext.fillStyle = '#0000FF';
+        chartContext.fillStyle = '#FFFFFF';
         chartContext.font = '12px sans-serif';
         chartContext.textAlign = 'start';
         chartContext.textBaseline = 'top';
+        chartContext.strokeStyle = '#FFFFFF'
+        chartContext.lineWidth = 2;
+        chartContext.strokeText(json.survey, chartImageX + 10, chartImageY + 10);
+        chartContext.fillStyle = '#0000FF';
         chartContext.fillText(json.survey, chartImageX + 10, chartImageY + 10);
 
         // Direction indicator
-        chartContext.lineWidth = 2;
+        chartContext.strokeStyle = '#FFFFFF';
+        chartContext.lineWidth = 4;
+        chartContext.beginPath();
+        chartContext.moveTo(chartImageX + 502, chartImageY + 461);
+        chartContext.lineTo(chartImageX + 502, chartImageY + 502);
+        chartContext.lineTo(chartImageX + 461, chartImageY + 502);
+        chartContext.stroke();
+
         chartContext.strokeStyle = '#0000FF';
+        chartContext.lineWidth = 2;
         chartContext.beginPath();
         chartContext.moveTo(chartImageX + 502, chartImageY + 462);
         chartContext.lineTo(chartImageX + 502, chartImageY + 502);
@@ -94,14 +106,32 @@ function generateChart(t) {
 
         chartContext.textBaseline = 'bottom';
         chartContext.textAlign = 'center';
+
+        chartContext.strokeStyle = '#FFFFFF'
+        chartContext.strokeText('E', chartImageX + 455, chartImageY + 506);
+        chartContext.strokeText('N', chartImageX + 502, chartImageY + 457);
+        chartContext.fillStyle = '#0000FF';
         chartContext.fillText('E', chartImageX + 455, chartImageY + 506);
         chartContext.fillText('N', chartImageX + 502, chartImageY + 457);
 
         // Scale indicator
+        chartContext.strokeStyle = '#FFFFFF';
+        chartContext.lineWidth = 4;
+        chartContext.beginPath();
+        chartContext.moveTo(chartImageX + 9, chartImageY + 502);
+        chartContext.lineTo(chartImageX + 11 + 512 / t.size, chartImageY + 502);
+        chartContext.stroke();
+
+        chartContext.strokeStyle = '#0000FF';
+        chartContext.lineWidth = 2;
         chartContext.beginPath();
         chartContext.moveTo(chartImageX + 10, chartImageY + 502);
         chartContext.lineTo(chartImageX + 10 + 512 / t.size, chartImageY + 502);
         chartContext.stroke();
+
+        chartContext.strokeStyle = '#FFFFFF'
+        chartContext.strokeText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
+        chartContext.fillStyle = '#0000FF';
         chartContext.fillText('1\'', chartImageX + 10 + 256 / t.size, chartImageY + 497);
 
         // Original source position
