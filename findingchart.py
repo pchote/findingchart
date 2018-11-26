@@ -166,6 +166,7 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_format, in_year, ra_pm, d
                 data_pos=[old_x * scale_x, 512 - old_y * scale_y],
                 observing_pos=[new_x * scale_x, 512 - new_y * scale_y],
                 indicator_size=indicator_size,
+                survey=survey,
                 data='data:image/png;base64,' + base64.b64encode(output.read()).decode())
     finally:
         os.remove(filename)

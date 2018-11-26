@@ -76,6 +76,13 @@ function generateChart(t) {
 
         chartContext.drawImage(thumbImage[0], chartImageX, chartImageY);
 
+        // Survey source
+        chartContext.fillStyle = '#0000FF';
+        chartContext.font = '12px sans-serif';
+        chartContext.textAlign = 'start';
+        chartContext.textBaseline = 'top';
+        chartContext.fillText(json.survey, chartImageX + 10, chartImageY + 10);
+
         // Direction indicator
         chartContext.lineWidth = 2;
         chartContext.strokeStyle = '#0000FF';
@@ -85,8 +92,8 @@ function generateChart(t) {
         chartContext.lineTo(chartImageX + 462, chartImageY + 502);
         chartContext.stroke();
 
-        chartContext.fillStyle = '#0000FF';
-        chartContext.font = '12px sans-serif';
+        chartContext.textBaseline = 'bottom';
+        chartContext.textAlign = 'center';
         chartContext.fillText('E', chartImageX + 455, chartImageY + 506);
         chartContext.fillText('N', chartImageX + 502, chartImageY + 457);
 
@@ -168,7 +175,7 @@ function setup() {
     for (var i in targetData) {
       var data = new Image();
       data.src = targetData[i][1].toDataURL();
-      zip.file(targetData[i][0].name + '.png', data.src.substr(data.src.indexOf(',')+1), {base64: true});
+      zip.file(targetData[i][0].name + '_' + targetData[i][0].survey + '.png', data.src.substr(data.src.indexOf(',')+1), {base64: true});
     }
 
     zip.generateAsync({type:'blob'}).then(function (blob) {
