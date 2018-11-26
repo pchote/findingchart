@@ -2,7 +2,7 @@ var testSexagesimal = /^[+-]?\d+:\d+:\d+(\.\d+)?$/;
 var targetData = [];
 
 function generateChart(t) {
-  var url = generateURL + '?survey='+t.survey+'&size='+t.size+'&outepoch='+t.outepoch+'&ra='+t.ra+'&dec='+t.dec+'&rapm='+t.rapm+'&decpm='+t.decpm+'&epoch='+t.epoch
+  var url = generateURL + '?survey='+t.survey+'&size='+t.size+'&outepoch='+t.outepoch+'&ra='+t.ra+'&dec='+t.dec+'&format='+t.format+'&rapm='+t.rapm+'&decpm='+t.decpm+'&epoch='+t.epoch
 
   var chartWidth = t.annotate ? 522 : 512;
   var chartHeight = t.annotate ? 612 : 512;
@@ -180,6 +180,9 @@ function setup() {
     var outepoch = $("input[name='outepoch']").val();
     var size = $("input[name='size']").val();
     var survey = $("select[name='survey']").val();
+    var format = $("input[name='format']:checked").val();
+    var propermotion = $("input[name='propermotion']:checked").val();
+
     var type = $("input[name='type']:checked").val();
     var coords = $("textarea[name='coords']").val().split('\n');
 
@@ -225,14 +228,26 @@ function setup() {
       var decpm = parts[4];
       var epoch = parts[5];
 
-      if (ra === undefined || !testSexagesimal.test(ra)) {
-        $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH:MM:SS');
-        return;
-      }
+      if (format == 'sexagesimal') {
+        if (ra === undefined || !testSexagesimal.test(ra)) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH:MM:SS');
+          return;
+        }
 
-      if (dec === undefined || !testSexagesimal.test(dec)) {
-        $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as DD:MM:SS');
-        return;
+        if (dec === undefined || !testSexagesimal.test(dec)) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as DD:MM:SS');
+          return;
+        }
+      } else {
+        if (ra === undefined || parseFloat(ra) != ra) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as decimal degrees');
+          return;
+        }
+
+        if (dec === undefined || parseFloat(dec) != dec) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as decimal degrees');
+          return;
+        }
       }
 
       if (rapm === undefined || parseFloat(rapm) != rapm) {
@@ -243,6 +258,11 @@ function setup() {
       if (decpm === undefined || parseFloat(decpm) != decpm) {
         $('#error').html('Line ' + line + ': Unable to parse "' + decpm + '" as number');
         return;
+      }
+
+      if (propermotion == 'mas') {
+          rapm /= 1000;
+          decpm /= 1000;
       }
 
       if (epoch === undefined || parseFloat(epoch) != epoch) {
@@ -264,6 +284,7 @@ function setup() {
         'name': name,
         'ra': ra,
         'dec': dec,
+        'format': format,
         'rapm': rapm,
         'decpm': decpm,
         'epoch': epoch,

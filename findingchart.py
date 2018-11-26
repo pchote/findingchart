@@ -114,9 +114,14 @@ def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees,
     dec = dec_degrees + float(pm_dec_degrees) * delta_yr
     return (ra, dec)
 
-def generate_finding_chart(out_year, in_ra, in_dec, in_year, ra_pm, dec_pm, width, height, survey):
-    ra_j2000_degrees = parse_sexagesimal(in_ra) * 15
-    dec_j2000_degrees = parse_sexagesimal(in_dec)
+def generate_finding_chart(out_year, in_ra, in_dec, in_format, in_year, ra_pm, dec_pm, width, height, survey):
+    if in_format == 'sexagesimal':
+        ra_j2000_degrees = parse_sexagesimal(in_ra) * 15
+        dec_j2000_degrees = parse_sexagesimal(in_dec)
+    else:
+        ra_j2000_degrees = float(in_ra)
+        dec_j2000_degrees = float(in_dec)
+
     ra_pm_degrees = float(ra_pm) / 3600
     dec_pm_degrees = float(dec_pm) / 3600
 
@@ -174,6 +179,6 @@ def input_display():
 @app.route('/generate')
 def generate_chart_json():
     try:
-        return generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
+        return generate_finding_chart(request.args['outepoch'], request.args['ra'], request.args['dec'], request.args['format'], request.args['epoch'], request.args['rapm'], request.args['decpm'], request.args['size'], request.args['size'], request.args['survey'])
     except Exception as e:
         abort(500)

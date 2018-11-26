@@ -33,14 +33,26 @@
             <div class="form-group">
               <label for="coordinates">Enter targets (&lt;Name&gt; &lt;RA&gt; &lt;Dec&gt; &lt;RA-PM&gt; &lt;Dec-PM&gt; &lt;Coordinate Epoch&gt; &lt;Comment&gt;):</label>
               <textarea name="coords" class="form-control input-block" style="height: 350px"></textarea>
-              <span>RA and Dec should be in sexagesimal format, proper motions in arcsec per year.</span>
             </div>
             <div class="form-group">
               <label for="outepoch" class="control-label col-sm-2">Observing epoch:</label>
               <input type="text" id="outepoch" name="outepoch" class="form-control input-block col-sm-2" value="2000.0">
 
+              <label for="type" class="control-label col-sm-2">Coordinates:</label>
+              <div class="radio col-sm-6">
+                <label><input type="radio" name="format" id="format-segagesimal" value="sexagesimal" checked>Sexagesimal&nbsp;</label>
+                <label><input type="radio" name="format" id="format-degrees" value="decimal">Decimal Degrees</label>
+              </div>
+            </div>
+            <div class="form-group">
               <label for="size" class="control-label col-sm-2">Size (arcmin):</label>
               <input type="text" name="size" class="form-control input-block col-sm-2" value="5">
+
+              <label for="type" class="control-label col-sm-2">Proper Motion:</label>
+              <div class="radio col-sm-6">
+                <label><input type="radio" name="propermotion" id="pm-arcsec" value="arcsec" checked>arcsec / yr&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                <label><input type="radio" name="propermotion" id="pm-mas" value="mas">mas / yr</label>
+              </div>
             </div>
             <div class="form-group">
               <label for="survey" class="control-label col-sm-2">Source survey:</label>
@@ -55,8 +67,8 @@
                 <option>phase2_gsc1</option>
               </select>
               <label for="type" class="control-label col-sm-2">Chart type:</label>
-              <div class="radio col-sm-4">
-                <label><input type="radio" name="type" id="type-annotated" value="annotated" checked>Annotated&nbsp;&nbsp;&nbsp;&nbsp;</label>
+              <div class="radio col-sm-6">
+                <label><input type="radio" name="type" id="type-annotated" value="annotated" checked>Annotated&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
                 <label><input type="radio" name="type" id="type-raw" value="raw">Raw image</label>
               </div>
             </div>
