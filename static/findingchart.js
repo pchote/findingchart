@@ -261,11 +261,19 @@ function setup() {
       var name = parts[0];
       var ra = parts[1];
       var dec = parts[2];
-      var rapm = parts[3];
-      var decpm = parts[4];
-      var epoch = parts[5];
+      var coord_offset = 0;
 
-      if (format == 'sexagesimal') {
+      if (format == 'decimal') {
+        if (ra === undefined || parseFloat(ra) != ra) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as decimal degrees');
+          return;
+        }
+
+        if (dec === undefined || parseFloat(dec) != dec) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as decimal degrees');
+          return;
+        }
+      } else if (format == 'sexagesimal-colon') {
         if (ra === undefined || !testSexagesimal.test(ra)) {
           $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH:MM:SS');
           return;
@@ -276,16 +284,23 @@ function setup() {
           return;
         }
       } else {
-        if (ra === undefined || parseFloat(ra) != ra) {
-          $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as decimal degrees');
+        ra = parts[1] + ':' + parts[2] + ':' + parts[3];
+        dec = parts[4] + ':' + parts[5] + ':' + parts[6];
+        coord_offset = 4;
+        if (ra === undefined || !testSexagesimal.test(ra)) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + ra + '" as HH MM SS');
           return;
         }
 
-        if (dec === undefined || parseFloat(dec) != dec) {
-          $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as decimal degrees');
+        if (dec === undefined || !testSexagesimal.test(dec)) {
+          $('#error').html('Line ' + line + ': Unable to parse "' + dec + '" as DD MM SS');
           return;
         }
       }
+
+      var rapm = parseFloat(parts[3 + coord_offset]);
+      var decpm = parseFloat(parts[4 + coord_offset]);
+      var epoch = parseFloat(parts[5 + coord_offset]);
 
       if (rapm === undefined || parseFloat(rapm) != rapm) {
         $('#error').html('Line ' + line + ': Unable to parse "' + rapm + '" as number');
@@ -310,9 +325,9 @@ function setup() {
       // Enumerate through line to find start of comment (if it exists)
       // Want to make sure we take all character from the start of the comment
       var comment = undefined;
-      if (parts.length > 6) {
+      if (parts.length > 6 + coord_offset) {
         var start = 0;
-        for (var j = 0; j < 7; j++)
+        for (var j = 0; j < 7 + coord_offset; j++)
           start = coords[i].indexOf(parts[j], start);
         comment = coords[i].substring(start);
       }
