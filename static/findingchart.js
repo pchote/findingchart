@@ -143,39 +143,41 @@ function generateChart(t) {
         chartContext.arc(oldX, oldY, json.indicator_size, 0, 2 * Math.PI);
         chartContext.stroke();
 
-        // New source position
-        var newX = chartImageX + json.observing_pos[0];
-        var newY = chartImageY + json.observing_pos[1];
-        chartContext.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        chartContext.beginPath();
-        chartContext.arc(newX, newY, json.indicator_size, 0, 2 * Math.PI);
-        chartContext.fill();
+        if (t.newposition) {
+            // New source position
+            var newX = chartImageX + json.observing_pos[0];
+            var newY = chartImageY + json.observing_pos[1];
+            chartContext.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            chartContext.beginPath();
+            chartContext.arc(newX, newY, json.indicator_size, 0, 2 * Math.PI);
+            chartContext.fill();
 
-        // Connecting arrow
-        var deltaX = newX - oldX;
-        var deltaY = newY - oldY;
-        var deltaL = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (deltaL > 2.5 * json.indicator_size) {
-          var dirX = deltaX / deltaL;
-          var dirY = deltaY / deltaL;
+            // Connecting arrow
+            var deltaX = newX - oldX;
+            var deltaY = newY - oldY;
+            var deltaL = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (deltaL > 2.5 * json.indicator_size) {
+              var dirX = deltaX / deltaL;
+              var dirY = deltaY / deltaL;
 
-          var lineStartX = oldX + json.indicator_size * dirX;
-          var lineStartY = oldY + json.indicator_size * dirY;
-          var lineEndX = newX - json.indicator_size * dirX;
-          var lineEndY = newY - json.indicator_size * dirY;
+              var lineStartX = oldX + json.indicator_size * dirX;
+              var lineStartY = oldY + json.indicator_size * dirY;
+              var lineEndX = newX - json.indicator_size * dirX;
+              var lineEndY = newY - json.indicator_size * dirY;
 
-          var arrowAX = lineEndX - json.indicator_size * (dirY + dirX)
-          var arrowAY = lineEndY + json.indicator_size * (-dirY + dirX)
-          var arrowBX = lineEndX - json.indicator_size * (-dirY + dirX)
-          var arrowBY = lineEndY + json.indicator_size * (-dirY - dirX)
+              var arrowAX = lineEndX - json.indicator_size * (dirY + dirX)
+              var arrowAY = lineEndY + json.indicator_size * (-dirY + dirX)
+              var arrowBX = lineEndX - json.indicator_size * (-dirY + dirX)
+              var arrowBY = lineEndY + json.indicator_size * (-dirY - dirX)
 
-          chartContext.beginPath();
-          chartContext.moveTo(lineStartX, lineStartY);
-          chartContext.lineTo(lineEndX, lineEndY);
-          chartContext.moveTo(arrowAX, arrowAY);
-          chartContext.lineTo(lineEndX, lineEndY);
-          chartContext.lineTo(arrowBX, arrowBY);
-          chartContext.stroke();
+              chartContext.beginPath();
+              chartContext.moveTo(lineStartX, lineStartY);
+              chartContext.lineTo(lineEndX, lineEndY);
+              chartContext.moveTo(arrowAX, arrowAY);
+              chartContext.lineTo(lineEndX, lineEndY);
+              chartContext.lineTo(arrowBX, arrowBY);
+              chartContext.stroke();
+            }
         }
 
         if (t.annotate) {
@@ -222,6 +224,7 @@ function setup() {
 
     var type = $("input[name='type']:checked").val();
     var coords = $("textarea[name='coords']").val().split('\n');
+    var newpos = $("input[name='newpos']").prop('checked');
 
     if (parseFloat(size) != size) {
       $('#error').html('Unable to parse "' + size + '" as a number');
@@ -345,6 +348,7 @@ function setup() {
         'size': size,
         'annotate': type == 'annotated',
         'outepoch': outepoch,
+        'newposition': newpos,
       });
     }
 
