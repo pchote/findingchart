@@ -109,6 +109,7 @@ def sexagesimal(angle):
         degrees *= -1
 
     return '{:d}:{:02d}:{:05.2f}'.format(degrees, minutes, seconds)
+
 def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees, delta_yr):
     ra = ra_degrees + float(pm_ra_degrees) / math.cos(dec_degrees * math.pi / 180) * delta_yr
     dec = dec_degrees + float(pm_dec_degrees) * delta_yr

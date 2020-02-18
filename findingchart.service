@@ -3,10 +3,10 @@ Description=uWSGI server for Finding Chart generator
 After=network.target
 
 [Service]
-User=nginx
+User={{USER}}
 Group=nginx
-WorkingDirectory={{PROJECT_DIR}}}
-ExecStart=/usr/sbin/uwsgi --ini findingchart.ini
+WorkingDirectory={{PROJECT_DIR}}
+ExecStart=/usr/local/bin/uwsgi --ini findingchart.ini
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGINT
 
