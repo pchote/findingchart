@@ -25,7 +25,9 @@ import sys
 import traceback
 from PIL import Image, ImageOps
 from astropy import wcs
+from astropy.coordinates import Angle
 from astropy.io import fits
+import astropy.units as u
 from flask import abort
 from flask import Flask
 from flask import jsonify
@@ -83,33 +85,6 @@ def rescale_image_data(data, clip_low, clip_high):
     data = numpy.clip(data, low, high)
     return 255 - scale * (data - low)
 
-def parse_sexagesimal(string):
-    """Converts a sexagesimal string to decimal"""
-    parts = string.split(':')
-    if len(parts) != 3:
-        raise ValueError('Invalid input: ' + string)
-
-    a = float(parts[0])
-    b = math.copysign(float(parts[1]), a)
-    c = math.copysign(float(parts[2]), a)
-
-    return a + b / 60 + c / 3600
-
-def sexagesimal(angle):
-    """Formats a decimal number in sexagesimal format"""
-    negative = angle < 0
-    angle = abs(angle)
-
-    degrees = int(angle)
-    angle = (angle - degrees) * 60
-    minutes = int(angle)
-    seconds = (angle - minutes) * 60
-
-    if negative:
-        degrees *= -1
-
-    return '{:d}:{:02d}:{:05.2f}'.format(degrees, minutes, seconds)
-
 def offset_proper_motion(ra_degrees, dec_degrees, pm_ra_degrees, pm_dec_degrees, delta_yr):
     ra = ra_degrees + float(pm_ra_degrees) / math.cos(dec_degrees * math.pi / 180) * delta_yr
     dec = dec_degrees + float(pm_dec_degrees) * delta_yr
@@ -120,8 +95,8 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_format, in_year, ra_pm, d
         ra_j2000_degrees = float(in_ra)
         dec_j2000_degrees = float(in_dec)
     else:
-        ra_j2000_degrees = parse_sexagesimal(in_ra) * 15
-        dec_j2000_degrees = parse_sexagesimal(in_dec)
+        ra_j2000_degrees = Angle(in_ra, unit=u.hourangle).to_value(u.deg)
+        dec_j2000_degrees = Angle(in_dec, unit=u.deg).to_value(u.deg)
 
 
     ra_pm_degrees = float(ra_pm) / 3600
@@ -141,7 +116,6 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_format, in_year, ra_pm, d
             # Headers can contain bogus time values (e.g. 93 minutes), so only consider year part
             frame_date = datetime.datetime.strptime(frame.header['DATE-OBS'][0:11], '%Y-%m-%dT')
             frame_year = (float(frame_date.strftime("%j"))-1) / 366 + float(frame_date.strftime("%Y"))
-            delta_years = frame_year - 2000
 
             frame_coords = offset_proper_motion(ra_j2000_degrees, dec_j2000_degrees,
                                                        ra_pm_degrees, dec_pm_degrees,
@@ -163,8 +137,8 @@ def generate_finding_chart(out_year, in_ra, in_dec, in_format, in_year, ra_pm, d
             png.save(output, format='PNG')
             output.seek(0)
             return jsonify(
-                ra=sexagesimal(ra_target / 15),
-                dec=sexagesimal(dec_target),
+                ra=Angle(ra_target, unit=u.deg).to(u.hourangle).to_string(sep=':', precision=2),
+                dec=Angle(dec_target, unit=u.deg).to_string(sep=':', precision=2),
                 data_pos=[old_x * scale_x, 512 - old_y * scale_y],
                 observing_pos=[new_x * scale_x, 512 - new_y * scale_y],
                 indicator_size=indicator_size,
