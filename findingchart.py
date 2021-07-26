@@ -43,35 +43,35 @@ def estimate_half_radius(image, fallback):
 
     thresh = 5 * bkg.globalrms
     raw_objects = sep.extract(subtracted, thresh)
-    radius = []
-    for star in raw_objects:
-        # Discard spuriously small sources
-        if star['npix'] < 16:
-            continue
+    kronrad, kronrad_flag = sep.kron_radius(
+        subtracted,
+        raw_objects['x'], raw_objects['y'],
+        raw_objects['a'], raw_objects['b'],
+        raw_objects['theta'], 6.0)
 
-        x = star['x']
-        y = star['y']
-        a = star['a']
-        b = star['b']
-        theta = star['theta']
-        kronrad, flag = sep.kron_radius(subtracted, x, y, a, b, theta, 6.0)
-        if flag != 0:
-            continue
+    flux, _, flux_flag = sep.sum_ellipse(
+        subtracted,
+        raw_objects['x'], raw_objects['y'],
+        raw_objects['a'], raw_objects['b'],
+        raw_objects['theta'], 2.5 * kronrad, subpix=0)
 
-        flux, _, flag = sep.sum_ellipse(subtracted, x, y, a, b, theta, 2.5 * kronrad,
-                                        subpix=0)
-        if flag != 0:
-            continue
+    r, r_flag = sep.flux_radius(
+        subtracted,
+        raw_objects['x'], raw_objects['y'],
+        6.0 * raw_objects['a'],
+        0.5, normflux=flux, subpix=5)
 
-        r, flag = sep.flux_radius(subtracted, x, y, 6.0 * a, 0.5, normflux=flux, subpix=5)
-        if flag != 0:
-            continue
-
-        radius.append(r)
+    # Discard spuriously small sources or those with errors
+    valid = numpy.logical_and.reduce([
+        raw_objects['npix'] >= 16,
+        kronrad_flag == 0,
+        flux_flag == 0,
+        r_flag == 0
+    ])
 
     # Require at least 10 objects for a more robust estimation
-    if len(radius) > 10:
-        return numpy.median(radius)
+    if numpy.sum(valid) > 10:
+        return numpy.median(r[valid])
 
     return fallback
 
